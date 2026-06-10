@@ -1,0 +1,44 @@
+{
+  "name": "ball_sim_watchface",
+  "author": "CoffeeCatRailway",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "ball_sim_watchface",
+    "uuid": "c277c3f4-5b64-4a0c-98d1-213c1e273c7f",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "dummy"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "font",
+          "name": "FONT_JERSEY_56",
+          "file": "fonts/Jersey10-Regular.ttf",
+          "compatibility": "2.7"
+        },
+        {
+          "type": "font",
+          "name": "FONT_JERSEY_24",
+          "file": "fonts/Jersey10-Regular.ttf",
+          "compatibility": "2.7"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_BT_ICON",
+          "file": "images/bt-icon.png"
+        }
+      ]
+    }
+  }
+}
