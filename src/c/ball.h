@@ -35,6 +35,10 @@ ball_t* ballCreate(vec2_t pos, vec2_t vel, uint16_t radius) {
  * </code>
  */
 void ballUpdate(ball_t *ball, float dt) {
+    // Note if 'Fixed-Point Arithmetic' is needed
+    // ms = 1000/30, dt = ms/1000
+    // 20 * dt = 20/30
+
     vec2_t newVel;
     v2mulf(&newVel, &ball->acceleration, dt);
     v2add(&newVel, &ball->velocity, &newVel);
@@ -48,9 +52,11 @@ void ballUpdate(ball_t *ball, float dt) {
     v2copyf(&ball->acceleration, 0.f, 0.f);
 }
 
+#define fastRound(x) ((int16_t) (x + .5f))
+
 void ballDraw(ball_t *ball, GContext *ctx, GColor color) {
     graphics_context_set_fill_color(ctx, color);
-    graphics_fill_circle(ctx, GPoint(lroundf(ball->position.x), lroundf(ball->position.y)), ball->radius);
+    graphics_fill_circle(ctx, GPoint(fastRound(ball->position.x), fastRound(ball->position.y)), ball->radius);
 }
 
 void ballDestroy(ball_t* ball) {
