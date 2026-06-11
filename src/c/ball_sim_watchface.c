@@ -1,12 +1,17 @@
+#include <math.h>
 #include <pebble.h>
+
+#include "vec2.h"
+#include "ball.h"
 
 static Window *s_window;
 static Layer *s_ballLayer;
 
-static uint32_t s_updateTime = 1000 / 30;
+static const uint32_t s_waitTimeMS = 1000 / 30;
+static const float s_deltaTime = (float) s_waitTimeMS / 1000.f;
 
-static int16_t s_ballX, s_ballY;
-static int16_t s_ballDY = 5;
+static ball_t *s_ball;
+static vec2_t s_gravity = vec2(0.f, 50.f);
 
 // static GFont s_fontJersey56;
 // static GFont s_fontJersey24;
@@ -78,28 +83,19 @@ static int16_t s_ballDY = 5;
 static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
     GRect bounds = layer_get_bounds(layer);
 
-    if (s_ballY > bounds.size.h - 10 || s_ballY < 10) {
-        s_ballDY = -s_ballDY;
+    v2add(&s_ball->acceleration, &s_ball->acceleration, &s_gravity);
+    ballUpdate(s_ball, s_deltaTime);
+
+    if (s_ball->position.y > (float) bounds.size.h - 10.f || s_ball->position.y < 10.f) {
+        s_ball->velocity.y = -s_ball->velocity.y;
     }
-    s_ballY += s_ballDY;
 
-    graphics_context_set_fill_color(ctx, GColorGreen);
-    graphics_fill_circle(ctx, GPoint(s_ballX, s_ballY), 10);
-
-    // uint16_t hw = bounds.size.w / 2, hh = bounds.size.h / 2;
-    // graphics_context_set_fill_color(ctx, GColorLightGray);
-    // graphics_fill_circle(ctx, GPoint(hw, 0), 10);
-    // graphics_context_set_fill_color(ctx, GColorRed);
-    // graphics_fill_circle(ctx, GPoint(bounds.size.w, hh), 10);
-    // graphics_context_set_fill_color(ctx, GColorGreen);
-    // graphics_fill_circle(ctx, GPoint(hw, bounds.size.h), 10);
-    // graphics_context_set_fill_color(ctx, GColorWhite);
-    // graphics_fill_circle(ctx, GPoint(0, hh), 10);
+    ballDraw(s_ball, ctx, GColorGreen);
 }
 
 static void handleTimerTick() {
     layer_mark_dirty(s_ballLayer);
-    app_timer_register(s_updateTime, handleTimerTick, NULL);
+    app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 }
 
 static void handleSecondTick(struct tm *tickTime, TimeUnits unitsChanged) {
@@ -110,8 +106,7 @@ static void windowLoad(Window *window) {
     Layer *windowLayer = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(windowLayer);
 
-    s_ballX = bounds.size.w / 2;
-    s_ballY = bounds.size.h / 2;
+    s_ball = ballCreate(vec2((float) bounds.size.w / 2.f, (float) bounds.size.h / 2.f), vec2zero, 10);
 
     s_ballLayer = layer_create(bounds);
     layer_set_update_proc(s_ballLayer, ballLayerUpdateProc);
@@ -164,6 +159,8 @@ static void windowLoad(Window *window) {
 }
 
 static void windowUnload(Window *window) {
+    ballDestroy(s_ball);
+
     layer_destroy(s_ballLayer);
     // text_layer_destroy(s_timeLayer);
     // text_layer_destroy(s_dateLayer);
@@ -187,7 +184,7 @@ static void init() {
     window_stack_push(s_window, true);
 
     // tick_timer_service_subscribe(SECOND_UNIT, handleSecondTick);
-    app_timer_register(s_updateTime, handleTimerTick, NULL);
+    app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 
     // update();
     //
