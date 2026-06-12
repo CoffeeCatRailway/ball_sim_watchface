@@ -10,13 +10,13 @@
 #include "vec2.h"
 
 typedef struct ball_s {
-    vec2_t position;
-    vec2_t velocity;
-    vec2_t acceleration;
+    Vec2 position;
+    Vec2 velocity;
+    Vec2 acceleration;
     uint16_t radius;
 } ball_t;
 
-ball_t* ballCreate(vec2_t pos, vec2_t vel, uint16_t radius) {
+ball_t* ballCreate(Vec2 pos, Vec2 vel, uint16_t radius) {
     ball_t* ball = malloc(sizeof(ball_t));
     v2copy(&ball->position, &pos);
     v2copy(&ball->velocity, &vel);
@@ -34,29 +34,27 @@ ball_t* ballCreate(vec2_t pos, vec2_t vel, uint16_t radius) {
  * acc = (0,0)
  * </code>
  */
-void ballUpdate(ball_t *ball, float dt) {
+void ballUpdate(ball_t *ball, sll dt) {
     // Note if 'Fixed-Point Arithmetic' is needed
     // ms = 1000/30, dt = ms/1000
     // 20 * dt = 20/30
 
-    vec2_t newVel;
-    v2mulf(&newVel, &ball->acceleration, dt);
+    Vec2 newVel;
+    v2mulsll(&newVel, &ball->acceleration, dt);
     v2add(&newVel, &ball->velocity, &newVel);
 
-    vec2_t p;
+    Vec2 p;
     v2add(&p, &ball->velocity, &newVel);
-    v2mulf(&p, &p, .5f * dt);
+    v2mulsll(&p, &p, slldiv2(dt));
     v2add(&ball->position, &ball->position, &p);
 
     v2copy(&ball->velocity, &newVel);
-    v2copyf(&ball->acceleration, 0.f, 0.f);
+    v2copyi(&ball->acceleration, 0, 0);
 }
 
-#define fastRound(x) ((int16_t) (x + .5f))
-
-void ballDraw(ball_t *ball, GContext *ctx, GColor color) {
+void ballDraw(ball_t *ball, GContext *ctx, GPoint *offset, GColor color) {
     graphics_context_set_fill_color(ctx, color);
-    graphics_fill_circle(ctx, GPoint(fastRound(ball->position.x), fastRound(ball->position.y)), ball->radius);
+    graphics_fill_circle(ctx, GPoint(sll2int(ball->position.x) + offset->x, sll2int(ball->position.y) + offset->y), ball->radius);
 }
 
 void ballDestroy(ball_t* ball) {

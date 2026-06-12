@@ -1,4 +1,5 @@
 #include <pebble.h>
+#include "math-sll.h"
 
 #include "vec2.h"
 #include "ball.h"
@@ -7,13 +8,13 @@ static Window *s_window;
 static Layer *s_ballLayer;
 
 static const uint32_t s_waitTimeMS = 1000 / 30;
-static const float s_deltaTime = (float) s_waitTimeMS / 1000.f;
+static sll s_deltaTime;
+
+static Vec2 s_gravity;
+static GPoint s_halfScreenGP;
+static int16_t s_worldRadius;
 
 static ball_t *s_ball;
-static vec2_t s_gravity = vec2(0.f, 200.f);
-
-static int16_t s_screenWidth, s_screenHeight;
-static int16_t s_screenWidthHalf, s_screenHeightHalf;
 
 // static GFont s_fontJersey56;
 // static GFont s_fontJersey24;
@@ -86,26 +87,18 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
     v2add(&s_ball->acceleration, &s_ball->acceleration, &s_gravity);
     ballUpdate(s_ball, s_deltaTime);
 
-#if defined(PBL_ROUND)
-    vec2_t posCentered;
-    v2sub(&posCentered, &s_ball->position, &vec2(s_screenWidthHalf, s_screenHeightHalf));
-    if (v2lengthsq(&posCentered) > (float) (s_screenWidthHalf * s_screenWidthHalf)) {
+    sll scrWidthSLL = int2sll(s_worldRadius);
+    sll diff = sllsub(v2length(&s_ball->position), scrWidthSLL);
+    //diff = diff < 0 ? sllneg(diff) : diff;
+    if (diff > 0) {
         v2neg(&s_ball->velocity, &s_ball->velocity);
     }
-#elif defined(PBL_RECT)
-    if (s_ball->position.x > (float) (s_screenWidth - s_ball->radius) || s_ball->position.x < (float) s_ball->radius) {
-        s_ball->velocity.x = -s_ball->velocity.x;
-    }
-    if (s_ball->position.y > (float) (s_screenHeight - s_ball->radius) || s_ball->position.y < (float) s_ball->radius) {
-        s_ball->velocity.y = -s_ball->velocity.y;
-    }
-#endif
 
-    ballDraw(s_ball, ctx, GColorGreen);
+    ballDraw(s_ball, ctx, &s_halfScreenGP, GColorGreen);
 
     graphics_context_set_stroke_width(ctx, 2);
     graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_draw_circle(ctx, GPoint(s_screenWidthHalf, s_screenHeightHalf), s_screenWidthHalf - 1);
+    graphics_draw_circle(ctx, s_halfScreenGP, s_worldRadius - 1);
 }
 
 static void handleTimerTick() {
@@ -116,18 +109,30 @@ static void handleTimerTick() {
 static void windowLoad(Window *window) {
     Layer *windowLayer = window_get_root_layer(window);
     GRect bounds = layer_get_bounds(windowLayer);
+    int16_t minBound;
+    if (bounds.size.w < bounds.size.h) {
+        minBound = bounds.size.w;
+    } else {
+        minBound = bounds.size.h;
+    }
 
-    s_screenWidth = bounds.size.w;
-    s_screenHeight = bounds.size.h;
-    s_screenWidthHalf = s_screenWidth / 2;
-    s_screenHeightHalf = s_screenHeight / 2;
+    // globals
+    s_deltaTime = dbl2sll((double) s_waitTimeMS / 1000.0);
 
-    s_ball = ballCreate(vec2((float) s_screenWidthHalf, (float) s_screenHeightHalf), vec2(100.f, 0.f), 10);
+    v2copyi(&s_gravity, 0, 200);
 
+    s_halfScreenGP = GPoint(bounds.size.w / 2, bounds.size.h / 2);
+    s_worldRadius = minBound / 2;
+
+    // ball
+    s_ball = ballCreate(vec2zero, vec2(100, 0), 10);
+
+    // layers
     s_ballLayer = layer_create(bounds);
     layer_set_update_proc(s_ballLayer, ballLayerUpdateProc);
     layer_add_child(windowLayer, s_ballLayer);
 
+    // start simulation
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 
     // s_fontJersey56 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_JERSEY_56));
