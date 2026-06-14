@@ -17,40 +17,20 @@ static Vec2 s_gravity;
 static GPoint s_halfScreenGP;
 static int16_t s_worldRadius;
 
+static GColor s_ballColor;
 static Ball s_ballArr[BALL_COUNT];
 
-// static Layer *s_batteryLayer;
-// static int s_batteryLevel;
-//
-// static BitmapLayer *s_btIconLayer;
-// static GBitmap *s_btIconBitmap;
-//
-// static void batteryUpdateProc(Layer *layer, GContext *ctx) {
-//     GRect bounds = layer_get_bounds(layer);
-//
-//     int barWidth = (s_batteryLevel * (bounds.size.w - 4)) / 100;
-//
-//     graphics_context_set_stroke_color(ctx, GColorWhite);
-//     graphics_draw_round_rect(ctx, bounds, 2);
-//
-//     GColor barColor;
-//     if (s_batteryLevel <= 20)
-//         barColor = PBL_IF_COLOR_ELSE(GColorRed, GColorWhite);
-//     else if (s_batteryLevel <= 40)
-//         barColor = PBL_IF_COLOR_ELSE(GColorChromeYellow, GColorWhite);
-//     else
-//         barColor = PBL_IF_COLOR_ELSE(GColorGreen, GColorWhite);
-//
-//     graphics_context_set_fill_color(ctx, barColor);
-//     graphics_fill_rect(ctx, GRect(2, 2, barWidth, bounds.size.h - 4), 1, GCornerNone);
-// }
-//
-// static void batteryCallback(BatteryChargeState state) {
-//     s_batteryLevel = state.charge_percent;
-//
-//     layer_mark_dirty(s_batteryLayer);
-// }
-//
+static void batteryCallback(BatteryChargeState state) {
+    if (state.charge_percent <= 20) {
+        s_ballColor = PBL_IF_COLOR_ELSE(GColorRed, GColorWhite);
+    } else if (state.charge_percent <= 40) {
+        s_ballColor = PBL_IF_COLOR_ELSE(GColorChromeYellow, GColorWhite);
+    } else {
+        s_ballColor = PBL_IF_COLOR_ELSE(GColorGreen, GColorWhite);
+    }
+    layer_mark_dirty(s_ballLayer);
+}
+
 // static void bluetoothCallback(bool connected) {
 //     layer_set_hidden(bitmap_layer_get_layer(s_btIconLayer), connected);
 //
@@ -96,7 +76,7 @@ static void ballContrainWorld(Ball *ball) {
     }
 }
 
-static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
+static void simUpdate() {
     for (int i = 0; i < BALL_COUNT; i++) {
         Ball *ball = &s_ballArr[i];
         // contrain + collide
@@ -109,9 +89,13 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
         // update
         v2add(&ball->acceleration, &ball->acceleration, &s_gravity);
         ballUpdate(ball, s_deltaTime);
+    }
+    layer_mark_dirty(s_ballLayer);
+}
 
-        // draw
-        ballDraw(ball, ctx, &s_halfScreenGP, GColorGreen);
+static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
+    for (int i = 0; i < BALL_COUNT; i++) {
+        ballDraw(&s_ballArr[i], ctx, &s_halfScreenGP, s_ballColor);
     }
 
     graphics_context_set_stroke_width(ctx, 2);
@@ -120,7 +104,7 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
 }
 
 static void handleTimerTick() {
-    layer_mark_dirty(s_ballLayer);
+    simUpdate();
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 }
 
@@ -168,15 +152,6 @@ static void windowLoad(Window *window) {
     // start simulation
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 
-    // // battery layer
-    // int barWidth = bounds.size.w / 2;
-    // int barX = (bounds.size.w - barWidth) / 2;
-    // int barY = bounds.size.h / PBL_IF_ROUND_ELSE(8, 28);
-    // s_batteryLayer = layer_create(GRect(barX, barY, barWidth, 8));
-    // layer_set_update_proc(s_batteryLayer, batteryUpdateProc);
-    //
-    // layer_add_child(windowLayer, s_batteryLayer);
-    //
     // s_btIconBitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
     //
     // int btY = barY + 12;
@@ -205,8 +180,9 @@ static void init() {
                                });
     window_stack_push(s_window, true);
 
-    // batteryCallback(battery_state_service_peek());
-    //
+    battery_state_service_subscribe(batteryCallback);
+    batteryCallback(battery_state_service_peek());
+
     // connection_service_subscribe((ConnectionHandlers){
     //     .pebble_app_connection_handler = bluetoothCallback
     // });
@@ -214,7 +190,7 @@ static void init() {
 
 static void deinit() {
     // connection_service_unsubscribe();
-    // battery_state_service_unsubscribe();
+    battery_state_service_unsubscribe();
     window_destroy(s_window);
 }
 
