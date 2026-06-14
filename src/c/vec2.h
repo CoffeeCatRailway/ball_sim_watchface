@@ -41,25 +41,34 @@ void v2mulsll(Vec2 *dest, Vec2 *a, sll s) {
     dest->y = sllmul(a->y, s);
 }
 
+void v2divsll(Vec2 *dest, Vec2 *a, sll s) {
+    dest->x = slldiv(a->x, s);
+    dest->y = slldiv(a->y, s);
+}
+
 void v2neg(Vec2 *dest, Vec2 *a) {
     dest->x = sllneg(a->x);
     dest->y = sllneg(a->y);
 }
 
-sll v2length(Vec2 *a) {
-    sll x2 = sllmul(a->x, a->x);
-    sll y2 = sllmul(a->y, a->y);
-    return sllsqrt(slladd(x2, y2));
+sll v2dot(Vec2 *a, Vec2 *b) {
+    sll abx = sllmul(a->x, b->x);
+    sll aby = sllmul(a->y, b->y);
+    return slladd(abx, aby);
 }
 
-void v2normalize(Vec2 *dest, Vec2 *a) {
-    sll len = v2length(a);
-    if (len == 0) {
+sll v2length(Vec2 *a) {
+    return sllsqrt(v2dot(a, a));
+}
+
+void v2normalize(Vec2 *dest, sll *len, Vec2 *a) {
+    *len = v2length(a);
+    if (*len == 0) {
         dest->x = 0;
         dest->y = 0;
     }
-    dest->x = slldiv(a->x, len);
-    dest->y = slldiv(a->y, len);
+    dest->x = slldiv(a->x, *len);
+    dest->y = slldiv(a->y, *len);
 }
 
 #endif //BALL_SIM_WATCHFACE_VEC2_H

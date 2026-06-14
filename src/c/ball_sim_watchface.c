@@ -4,6 +4,9 @@
 #include "vec2.h"
 #include "ball.h"
 
+#define BALL_COUNT 40
+#define BALL_RADIUS 15
+
 static Window *s_window;
 static Layer *s_ballLayer;
 
@@ -14,40 +17,13 @@ static Vec2 s_gravity;
 static GPoint s_halfScreenGP;
 static int16_t s_worldRadius;
 
-static ball_t *s_ball;
+static Ball s_ballArr[BALL_COUNT];
 
-// static GFont s_fontJersey56;
-// static GFont s_fontJersey24;
-//
 // static Layer *s_batteryLayer;
 // static int s_batteryLevel;
 //
 // static BitmapLayer *s_btIconLayer;
 // static GBitmap *s_btIconBitmap;
-//
-// static TextLayer *s_timeLayer;
-// static TextLayer *s_dateLayer;
-//
-// static void update() {
-//     time_t temp = time(NULL);
-//     struct tm *tickTime = localtime(&temp);
-//
-//     // time layer
-//     static char s_timeBuffer[8];
-//     strftime(s_timeBuffer, sizeof(s_timeBuffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tickTime);
-//
-//     text_layer_set_text(s_timeLayer, s_timeBuffer);
-//
-//     // date layer
-//     static char s_dateBuffer[20];
-//     strftime(s_dateBuffer, sizeof(s_dateBuffer), "%a %d/%b %m/%Y", tickTime);
-//
-//     text_layer_set_text(s_dateLayer, s_dateBuffer);
-// }
-//
-// static void tickHandler(struct tm *tickTime, TimeUnits unitsChanged) {
-//     update();
-// }
 //
 // static void batteryUpdateProc(Layer *layer, GContext *ctx) {
 //     GRect bounds = layer_get_bounds(layer);
@@ -83,18 +59,60 @@ static ball_t *s_ball;
 //     }
 // }
 
-static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
-    v2add(&s_ball->acceleration, &s_ball->acceleration, &s_gravity);
-    ballUpdate(s_ball, s_deltaTime);
+static void ballCollideBall(Ball *ball1, Ball *ball2) {
+    sll dist, minDist = int2sll(ball1->radius + ball2->radius);
+    Vec2 dir;
+    v2sub(&dir, &ball1->position, &ball2->position);
+    v2normalize(&dir, &dist, &dir);
 
-    sll scrWidthSLL = int2sll(s_worldRadius);
-    sll diff = sllsub(v2length(&s_ball->position), scrWidthSLL);
-    //diff = diff < 0 ? sllneg(diff) : diff;
-    if (diff > 0) {
-        v2neg(&s_ball->velocity, &s_ball->velocity);
+    // inside other
+    if (dist < minDist) {
+        sll force = slldiv2(sllsub(dist, minDist));
+
+        Vec2 forceV;
+        v2mulsll(&forceV, &dir, force);
+        v2sub(&ball1->position, &ball1->position, &forceV);
+
+        v2mulsll(&forceV, &dir, force);
+        v2add(&ball2->position, &ball2->position, &forceV);
     }
+}
 
-    ballDraw(s_ball, ctx, &s_halfScreenGP, GColorGreen);
+static void ballContrainWorld(Ball *ball) {
+    sll dist, minDist = int2sll(s_worldRadius - ball->radius - 1);
+    Vec2 dir;
+    v2normalize(&dir, &dist, &ball->position);
+
+    // outside world
+    if (dist > minDist) {
+        // Vec2 vel;
+        // ballGetVelocityPrev(ball, &vel, s_deltaTime);
+        // v2neg(&vel, &vel);
+        // v2mulsll(&vel, &vel, dbl2sll(9.0 / 10.0));
+
+        v2mulsll(&ball->position, &dir, minDist);
+        // ballSetVelocity(ball, vel, s_deltaTime);
+        // v2add(&ball->positionPrev, &ball->position, &vel);
+    }
+}
+
+static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
+    for (int i = 0; i < BALL_COUNT; i++) {
+        Ball *ball = &s_ballArr[i];
+        // contrain + collide
+        for (int j = 0; j < BALL_COUNT; j++) {
+            Ball *ball2 = &s_ballArr[j];
+            ballCollideBall(ball, ball2);
+        }
+        ballContrainWorld(ball);
+
+        // update
+        v2add(&ball->acceleration, &ball->acceleration, &s_gravity);
+        ballUpdate(ball, s_deltaTime);
+
+        // draw
+        ballDraw(ball, ctx, &s_halfScreenGP, GColorGreen);
+    }
 
     graphics_context_set_stroke_width(ctx, 2);
     graphics_context_set_stroke_color(ctx, GColorWhite);
@@ -119,13 +137,28 @@ static void windowLoad(Window *window) {
     // globals
     s_deltaTime = dbl2sll((double) s_waitTimeMS / 1000.0);
 
-    v2copyi(&s_gravity, 0, 200);
+    v2copyi(&s_gravity, 0, 100);
 
     s_halfScreenGP = GPoint(bounds.size.w / 2, bounds.size.h / 2);
     s_worldRadius = minBound / 2;
 
     // ball
-    s_ball = ballCreate(vec2zero, vec2(100, 0), 10);
+    // s_ball = ballCreateP(vec2zero, 10);
+    // ballSetVelocity(s_ball, vec2(100, 0), s_deltaTime);
+    for (int i = 0; i < BALL_COUNT; i++) {
+        Ball *ball = &s_ballArr[i];
+        sll is = int2sll(i);
+
+        Vec2 pos = vec2zero;
+        pos.x = sllmul(sllcos(is), int2sll(s_worldRadius / 2));
+        pos.y = sllmul(sllsin(is), int2sll(s_worldRadius / 2));
+        ballCreate(ball, pos, BALL_RADIUS);
+
+        // sll per = sllsub(sllmul2(slldiv(int2sll(i), int2sll(BALL_COUNT))), CONST_1);
+        // Vec2 vel = vec2(100, 0);
+        // v2mulsll(&vel, &vel, per);
+        // ballSetVelocity(ball, vel, s_deltaTime);
+    }
 
     // layers
     s_ballLayer = layer_create(bounds);
@@ -135,32 +168,6 @@ static void windowLoad(Window *window) {
     // start simulation
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
 
-    // s_fontJersey56 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_JERSEY_56));
-    // s_fontJersey24 = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_JERSEY_24));
-    //
-    // int dateHeight = 30;
-    // int blockHeight = 56 + dateHeight;
-    // int timeY = (bounds.size.h - blockHeight) / 2 - 10;
-    // int dateY = timeY + 56;
-    //
-    // // time layer
-    // s_timeLayer = text_layer_create(GRect(0, timeY, bounds.size.w, 60));
-    // text_layer_set_background_color(s_timeLayer, GColorClear);
-    // text_layer_set_text_color(s_timeLayer, GColorWhite);
-    // text_layer_set_font(s_timeLayer, s_fontJersey56);
-    // text_layer_set_text_alignment(s_timeLayer, GTextAlignmentCenter);
-    //
-    // layer_add_child(windowLayer, text_layer_get_layer(s_timeLayer));
-    //
-    // // date layer
-    // s_dateLayer = text_layer_create(GRect(0, dateY, bounds.size.w, 30));
-    // text_layer_set_background_color(s_dateLayer, GColorClear);
-    // text_layer_set_text_color(s_dateLayer, GColorWhite);
-    // text_layer_set_font(s_dateLayer, s_fontJersey24);
-    // text_layer_set_text_alignment(s_dateLayer, GTextAlignmentCenter);
-    //
-    // layer_add_child(windowLayer, text_layer_get_layer(s_dateLayer));
-    //
     // // battery layer
     // int barWidth = bounds.size.w / 2;
     // int barX = (bounds.size.w - barWidth) / 2;
@@ -182,17 +189,9 @@ static void windowLoad(Window *window) {
 }
 
 static void windowUnload(Window *window) {
-    ballDestroy(s_ball);
+    // ballDestroy(s_ball);
 
     layer_destroy(s_ballLayer);
-    // text_layer_destroy(s_timeLayer);
-    // text_layer_destroy(s_dateLayer);
-    //
-    // fonts_unload_custom_font(s_fontJersey56);
-    // fonts_unload_custom_font(s_fontJersey24);
-    //
-    // layer_destroy(s_batteryLayer);
-    //
     // gbitmap_destroy(s_btIconBitmap);
     // bitmap_layer_destroy(s_btIconLayer);
 }
@@ -206,11 +205,6 @@ static void init() {
                                });
     window_stack_push(s_window, true);
 
-    // update();
-    //
-    // tick_timer_service_subscribe(MINUTE_UNIT, tickHandler);
-    // battery_state_service_subscribe(batteryCallback);
-    //
     // batteryCallback(battery_state_service_peek());
     //
     // connection_service_subscribe((ConnectionHandlers){
@@ -221,7 +215,6 @@ static void init() {
 static void deinit() {
     // connection_service_unsubscribe();
     // battery_state_service_unsubscribe();
-    // tick_timer_service_unsubscribe();
     window_destroy(s_window);
 }
 

@@ -9,55 +9,59 @@
 
 #include "vec2.h"
 
-typedef struct ball_s {
+typedef struct Ball {
     Vec2 position;
-    Vec2 velocity;
+    Vec2 positionPrev;
     Vec2 acceleration;
     uint16_t radius;
-} ball_t;
+} Ball;
 
-ball_t* ballCreate(Vec2 pos, Vec2 vel, uint16_t radius) {
-    ball_t* ball = malloc(sizeof(ball_t));
+Ball* ballCreateP(Vec2 pos, uint16_t radius) {
+    Ball* ball = malloc(sizeof(Ball));
     v2copy(&ball->position, &pos);
-    v2copy(&ball->velocity, &vel);
-    v2copy(&ball->acceleration, &vec2zero);
+    v2copy(&ball->positionPrev, &pos);
+    v2copyi(&ball->acceleration, 0, 0);
     ball->radius = radius;
     return ball;
 }
 
-/**
- * Verlet Integration
- * <code>
- * newVel = vel + acc * dt
- * pos += (vel + newVel) * 0.5 * dt
- * vel = newVel
- * acc = (0,0)
- * </code>
- */
-void ballUpdate(ball_t *ball, sll dt) {
-    // Note if 'Fixed-Point Arithmetic' is needed
-    // ms = 1000/30, dt = ms/1000
-    // 20 * dt = 20/30
+void ballCreate(Ball *ball, Vec2 pos, uint16_t radius) {
+    v2copy(&ball->position, &pos);
+    v2copy(&ball->positionPrev, &pos);
+    v2copyi(&ball->acceleration, 0, 0);
+    ball->radius = radius;
+}
 
-    Vec2 newVel;
-    v2mulsll(&newVel, &ball->acceleration, dt);
-    v2add(&newVel, &ball->velocity, &newVel);
+void ballUpdate(Ball *ball, sll dt) {
+    Vec2 delta;
+    v2sub(&delta, &ball->position, &ball->positionPrev);
+    v2copy(&ball->positionPrev, &ball->position);
 
-    Vec2 p;
-    v2add(&p, &ball->velocity, &newVel);
-    v2mulsll(&p, &p, slldiv2(dt));
-    v2add(&ball->position, &ball->position, &p);
+    Vec2 acc;
+    v2mulsll(&acc, &ball->acceleration, sllmul(dt, dt));
+    v2add(&delta, &delta, &acc);
+    v2add(&ball->position, &ball->position, &delta);
 
-    v2copy(&ball->velocity, &newVel);
     v2copyi(&ball->acceleration, 0, 0);
 }
 
-void ballDraw(ball_t *ball, GContext *ctx, GPoint *offset, GColor color) {
-    graphics_context_set_fill_color(ctx, color);
-    graphics_fill_circle(ctx, GPoint(sll2int(ball->position.x) + offset->x, sll2int(ball->position.y) + offset->y), ball->radius);
+void ballGetVelocityPrev(Ball *ball, Vec2 *vel, sll dt) {
+    // (curr - prev) / 2t
+    v2sub(vel, &ball->position, &ball->positionPrev);
+    v2divsll(vel, vel, dt);
 }
 
-void ballDestroy(ball_t* ball) {
+void ballSetVelocity(Ball *ball, Vec2 vel, sll dt) {
+    v2mulsll(&vel, &vel, dt);
+    v2sub(&ball->positionPrev, &ball->position, &vel);
+}
+
+void ballDraw(Ball *ball, GContext *ctx, GPoint *offset, GColor color) {
+    graphics_context_set_fill_color(ctx, color);
+    graphics_fill_circle(ctx, GPoint(slladd(sll2int(ball->position.x), offset->x), slladd(sll2int(ball->position.y), offset->y)), ball->radius);
+}
+
+void ballDestroy(Ball* ball) {
     free(ball);
 }
 

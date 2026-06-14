@@ -2,7 +2,7 @@
   "name": "ball_sim_watchface",
   "author": "CoffeeCatRailway",
   "version": "1.0.0",
-  "keywords": ["pebble-app"],
+  "keywords": ["pebble-watchface", "simulation"],
   "private": true,
   "dependencies": {},
   "pebble": {
@@ -16,23 +16,9 @@
     "watchapp": {
       "watchface": true
     },
-    "messageKeys": [
-      "dummy"
-    ],
+    "messageKeys": [],
     "resources": {
       "media": [
-        {
-          "type": "font",
-          "name": "FONT_JERSEY_56",
-          "file": "fonts/Jersey10-Regular.ttf",
-          "compatibility": "2.7"
-        },
-        {
-          "type": "font",
-          "name": "FONT_JERSEY_24",
-          "file": "fonts/Jersey10-Regular.ttf",
-          "compatibility": "2.7"
-        },
         {
           "type": "bitmap",
           "name": "IMAGE_BT_ICON",
