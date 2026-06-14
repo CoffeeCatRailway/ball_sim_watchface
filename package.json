@@ -18,13 +18,7 @@
     },
     "messageKeys": [],
     "resources": {
-      "media": [
-        {
-          "type": "bitmap",
-          "name": "IMAGE_BT_ICON",
-          "file": "images/bt-icon.png"
-        }
-      ]
+      "media": []
     }
   }
 }

@@ -18,6 +18,7 @@ static GPoint s_halfScreenGP;
 static int16_t s_worldRadius;
 
 static GColor s_ballColor;
+static GColor s_borderColor;
 static Ball s_ballArr[BALL_COUNT];
 
 static void batteryCallback(BatteryChargeState state) {
@@ -31,13 +32,15 @@ static void batteryCallback(BatteryChargeState state) {
     layer_mark_dirty(s_ballLayer);
 }
 
-// static void bluetoothCallback(bool connected) {
-//     layer_set_hidden(bitmap_layer_get_layer(s_btIconLayer), connected);
-//
-//     if (!connected) {
-//         vibes_double_pulse();
-//     }
-// }
+static void bluetoothCallback(bool connected) {
+    if (!connected) {
+        s_borderColor = PBL_IF_COLOR_ELSE(GColorVeryLightBlue, GColorBlack);
+        vibes_double_pulse();
+    } else {
+        s_borderColor = GColorWhite;
+    }
+    layer_mark_dirty(s_ballLayer);
+}
 
 static void ballCollideBall(Ball *ball1, Ball *ball2) {
     sll dist, minDist = int2sll(ball1->radius + ball2->radius);
@@ -98,9 +101,9 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
         ballDraw(&s_ballArr[i], ctx, &s_halfScreenGP, s_ballColor);
     }
 
-    graphics_context_set_stroke_width(ctx, 2);
-    graphics_context_set_stroke_color(ctx, GColorWhite);
-    graphics_draw_circle(ctx, s_halfScreenGP, s_worldRadius - 1);
+    graphics_context_set_stroke_width(ctx, 4);
+    graphics_context_set_stroke_color(ctx, s_borderColor);
+    graphics_draw_circle(ctx, s_halfScreenGP, s_worldRadius - 2);
 }
 
 static void handleTimerTick() {
@@ -151,24 +154,10 @@ static void windowLoad(Window *window) {
 
     // start simulation
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
-
-    // s_btIconBitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_ICON);
-    //
-    // int btY = barY + 12;
-    // s_btIconLayer = bitmap_layer_create(GRect((bounds.size.w - 30) / 2, btY, 30, 30));
-    // bitmap_layer_set_bitmap(s_btIconLayer, s_btIconBitmap);
-    // bitmap_layer_set_compositing_mode(s_btIconLayer, GCompOpSet);
-    //
-    // layer_add_child(windowLayer, bitmap_layer_get_layer(s_btIconLayer));
-    // bluetoothCallback(connection_service_peek_pebble_app_connection());
 }
 
 static void windowUnload(Window *window) {
-    // ballDestroy(s_ball);
-
     layer_destroy(s_ballLayer);
-    // gbitmap_destroy(s_btIconBitmap);
-    // bitmap_layer_destroy(s_btIconLayer);
 }
 
 static void init() {
@@ -183,13 +172,14 @@ static void init() {
     battery_state_service_subscribe(batteryCallback);
     batteryCallback(battery_state_service_peek());
 
-    // connection_service_subscribe((ConnectionHandlers){
-    //     .pebble_app_connection_handler = bluetoothCallback
-    // });
+    connection_service_subscribe((ConnectionHandlers){
+        .pebble_app_connection_handler = bluetoothCallback
+    });
+    bluetoothCallback(connection_service_peek_pebble_app_connection());
 }
 
 static void deinit() {
-    // connection_service_unsubscribe();
+    connection_service_unsubscribe();
     battery_state_service_unsubscribe();
     window_destroy(s_window);
 }
