@@ -58,7 +58,10 @@ void ballSetVelocity(Ball *ball, Vec2 vel, sll dt) {
 
 void ballDraw(Ball *ball, GContext *ctx, GPoint *offset, GColor color) {
     graphics_context_set_fill_color(ctx, color);
-    graphics_fill_circle(ctx, GPoint(slladd(sll2int(ball->position.x), offset->x), slladd(sll2int(ball->position.y), offset->y)), ball->radius);
+    graphics_context_set_stroke_color(ctx, GColorBlack);
+    GPoint p = GPoint(slladd(sll2int(ball->position.x), offset->x), slladd(sll2int(ball->position.y), offset->y));
+    graphics_fill_circle(ctx, p, ball->radius);
+    graphics_draw_circle(ctx, p, ball->radius);
 }
 
 void ballDestroy(Ball* ball) {

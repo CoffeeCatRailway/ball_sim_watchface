@@ -4,13 +4,14 @@
 #include "vec2.h"
 #include "ball.h"
 
+#define FPS 30
 #define BALL_COUNT 40
-#define BALL_RADIUS 15
+#define BALL_RADIUS 17
 
 static Window *s_window;
 static Layer *s_ballLayer;
 
-static const uint32_t s_waitTimeMS = 1000 / 30;
+static const uint32_t s_waitTimeMS = 1000 / FPS;
 static sll s_deltaTime;
 
 static Vec2 s_gravity;
@@ -20,6 +21,41 @@ static int16_t s_worldRadius;
 static GColor s_ballColor;
 static GColor s_borderColor;
 static Ball s_ballArr[BALL_COUNT];
+
+static const GPathInfo MINUTE_HAND_POINTS = {
+    4, (GPoint []){
+        {-8, 10},
+        {8, 10},
+        {8, -120},
+        {-8, -120}
+    }
+};
+static GPath *s_minuteHand;
+static int32_t s_minuteHandAngle;
+
+static const GPathInfo HOUR_HAND_POINTS = {
+    4, (GPoint []){
+        {-6, 10},
+        {6, 10},
+        {6, -80},
+        {-6, -80}
+    }
+};
+static GPath *s_hourHand;
+static int32_t s_hourHandAngle;
+
+static void updateHands() {
+    time_t temp = time(NULL);
+    struct tm *tickTime = localtime(&temp);
+
+    s_minuteHandAngle = TRIG_MAX_ANGLE * tickTime->tm_min / 60;
+    s_hourHandAngle = TRIG_MAX_ANGLE * (tickTime->tm_hour % 12 * 6 + tickTime->tm_min / 10) / (12 * 6);
+}
+
+static void tickTimerCallback(struct tm *tickTime, TimeUnits unitsChanged) {
+    updateHands();
+    layer_mark_dirty(s_ballLayer);
+}
 
 static void batteryCallback(BatteryChargeState state) {
     if (state.charge_percent <= 20) {
@@ -101,6 +137,22 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
         ballDraw(&s_ballArr[i], ctx, &s_halfScreenGP, s_ballColor);
     }
 
+    // hands
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_context_set_stroke_color(ctx, GColorBlack);
+
+    gpath_rotate_to(s_minuteHand, s_minuteHandAngle);
+    gpath_draw_filled(ctx, s_minuteHand);
+    gpath_draw_outline(ctx, s_minuteHand);
+
+    gpath_rotate_to(s_hourHand, s_hourHandAngle);
+    gpath_draw_filled(ctx, s_hourHand);
+    gpath_draw_outline(ctx, s_hourHand);
+
+    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_fill_rect(ctx, GRect(s_halfScreenGP.x - 1, s_halfScreenGP.y - 1, 3, 3), 0, GCornerNone);
+
+    // border
     graphics_context_set_stroke_width(ctx, 4);
     graphics_context_set_stroke_color(ctx, s_borderColor);
     graphics_draw_circle(ctx, s_halfScreenGP, s_worldRadius - 2);
@@ -129,22 +181,22 @@ static void windowLoad(Window *window) {
     s_halfScreenGP = GPoint(bounds.size.w / 2, bounds.size.h / 2);
     s_worldRadius = minBound / 2;
 
-    // ball
-    // s_ball = ballCreateP(vec2zero, 10);
-    // ballSetVelocity(s_ball, vec2(100, 0), s_deltaTime);
+    // balls
+    sll ballCount10 = slladd(CONST_10, int2sll(BALL_COUNT));
+    sll ballSpiralRadius = int2sll(s_worldRadius - BALL_RADIUS);
+    sll spiralMul = dbl2sll(4.0);
     for (int i = 0; i < BALL_COUNT; i++) {
         Ball *ball = &s_ballArr[i];
         sll is = int2sll(i);
+        sll spiral = sllmul(slldiv(slladd(CONST_10, is), ballCount10), ballSpiralRadius);
 
         Vec2 pos = vec2zero;
-        pos.x = sllmul(sllcos(is), int2sll(s_worldRadius / 2));
-        pos.y = sllmul(sllsin(is), int2sll(s_worldRadius / 2));
+        is = sllmul(is, spiralMul);
+        pos.x = sllcos(is);
+        pos.y = sllsin(is);
+        // v2mulsll(&pos, &pos, int2sll(s_worldRadius / 2));
+        v2mulsll(&pos, &pos, spiral);
         ballCreate(ball, pos, BALL_RADIUS);
-
-        // sll per = sllsub(sllmul2(slldiv(int2sll(i), int2sll(BALL_COUNT))), CONST_1);
-        // Vec2 vel = vec2(100, 0);
-        // v2mulsll(&vel, &vel, per);
-        // ballSetVelocity(ball, vel, s_deltaTime);
     }
 
     // layers
@@ -154,6 +206,7 @@ static void windowLoad(Window *window) {
 
     // start simulation
     app_timer_register(s_waitTimeMS, handleTimerTick, NULL);
+    layer_mark_dirty(s_ballLayer);
 }
 
 static void windowUnload(Window *window) {
@@ -169,6 +222,9 @@ static void init() {
                                });
     window_stack_push(s_window, true);
 
+    tick_timer_service_subscribe(MINUTE_UNIT, tickTimerCallback);
+    updateHands();
+
     battery_state_service_subscribe(batteryCallback);
     batteryCallback(battery_state_service_peek());
 
@@ -176,11 +232,24 @@ static void init() {
         .pebble_app_connection_handler = bluetoothCallback
     });
     bluetoothCallback(connection_service_peek_pebble_app_connection());
+
+    s_minuteHand = gpath_create(&MINUTE_HAND_POINTS);
+    s_hourHand = gpath_create(&HOUR_HAND_POINTS);
+
+    Layer *windowLayer = window_get_root_layer(s_window);
+    GRect bounds = layer_get_bounds(windowLayer);
+    GPoint center = grect_center_point(&bounds);
+    gpath_move_to(s_minuteHand, center);
+    gpath_move_to(s_hourHand, center);
 }
 
 static void deinit() {
+    gpath_destroy(s_minuteHand);
+    gpath_destroy(s_hourHand);
+
     connection_service_unsubscribe();
     battery_state_service_unsubscribe();
+    tick_timer_service_unsubscribe();
     window_destroy(s_window);
 }
 
