@@ -138,7 +138,7 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
     }
 
     // hands
-    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_context_set_fill_color(ctx, s_borderColor);
     graphics_context_set_stroke_color(ctx, GColorBlack);
 
     gpath_rotate_to(s_minuteHand, s_minuteHandAngle);
