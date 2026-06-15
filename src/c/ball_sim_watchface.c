@@ -5,8 +5,8 @@
 #include "ball.h"
 
 #define FPS 30
-#define BALL_COUNT 40
-#define BALL_RADIUS 17
+#define BALL_COUNT 45
+#define BALL_RADIUS 13
 
 static Window *s_window;
 static Layer *s_ballLayer;
@@ -32,6 +32,8 @@ static const GPathInfo MINUTE_HAND_POINTS = {
 };
 static GPath *s_minuteHand;
 static int32_t s_minuteHandAngle;
+static sll s_minuteHandLength = _int2sll(120);
+static Vec2 s_minuteHandPos, s_minuteHandNorm, s_minuteHandTan;
 
 static const GPathInfo HOUR_HAND_POINTS = {
     4, (GPoint []){
@@ -43,6 +45,10 @@ static const GPathInfo HOUR_HAND_POINTS = {
 };
 static GPath *s_hourHand;
 static int32_t s_hourHandAngle;
+static sll s_hourHandLength = _int2sll(85);
+static Vec2 s_hourHandPos, s_hourHandNorm, s_hourHandTan;
+
+static sll s_handThickness = _int2sll(20);
 
 static void updateHands() {
     time_t temp = time(NULL);
@@ -50,6 +56,22 @@ static void updateHands() {
 
     s_minuteHandAngle = TRIG_MAX_ANGLE * tickTime->tm_min / 60;
     s_hourHandAngle = TRIG_MAX_ANGLE * (tickTime->tm_hour % 12 * 6 + tickTime->tm_min / 10) / (12 * 6);
+
+    sll minuteHandAngleSll = sllmul(slldiv(int2sll(s_minuteHandAngle), int2sll(TRIG_MAX_ANGLE)), sllmul2(CONST_PI));
+    s_minuteHandNorm.x = sllsin(minuteHandAngleSll);
+    s_minuteHandNorm.y = -sllcos(minuteHandAngleSll);
+    s_minuteHandTan.x = s_minuteHandNorm.y;
+    s_minuteHandTan.y = -s_minuteHandNorm.x;
+    s_minuteHandPos.x = sllmul(s_minuteHandNorm.x, s_minuteHandLength);
+    s_minuteHandPos.y = sllmul(s_minuteHandNorm.y, s_minuteHandLength);
+
+    sll hourHandAngleSll = sllmul(slldiv(int2sll(s_hourHandAngle), int2sll(TRIG_MAX_ANGLE)), sllmul2(CONST_PI));
+    s_hourHandNorm.x = sllsin(hourHandAngleSll);
+    s_hourHandNorm.y = -sllcos(hourHandAngleSll);
+    s_hourHandTan.x = s_hourHandNorm.y;
+    s_hourHandTan.y = -s_hourHandNorm.x;
+    s_hourHandPos.x = sllmul(s_hourHandNorm.x, s_hourHandLength);
+    s_hourHandPos.y = sllmul(s_hourHandNorm.y, s_hourHandLength);
 }
 
 static void tickTimerCallback(struct tm *tickTime, TimeUnits unitsChanged) {
@@ -104,14 +126,44 @@ static void ballContrainWorld(Ball *ball) {
 
     // outside world
     if (dist > minDist) {
-        // Vec2 vel;
-        // ballGetVelocityPrev(ball, &vel, s_deltaTime);
-        // v2neg(&vel, &vel);
-        // v2mulsll(&vel, &vel, dbl2sll(9.0 / 10.0));
-
         v2mulsll(&ball->position, &dir, minDist);
-        // ballSetVelocity(ball, vel, s_deltaTime);
-        // v2add(&ball->positionPrev, &ball->position, &vel);
+    }
+}
+
+static void ballCollideHand(Ball *ball, sll handLength, Vec2 *handPos, Vec2 *handNorm, Vec2 *handTan) {
+    sll distAlongHand = v2dot(&ball->position, handNorm);
+
+    // Default to along the hand
+    Vec2 norm;
+    v2copy(&norm, handTan);
+    sll distAwayFromHand = v2dot(&ball->position, &norm);
+    if (distAwayFromHand < 0) {
+        v2neg(&norm, &norm);
+        distAwayFromHand = -distAwayFromHand;
+    }
+
+    // Check if ball is colliding with hand end
+    if (distAlongHand < 0 || distAlongHand > handLength) {
+        // Check what end the ball is colliding with
+        if (distAlongHand < 0) {
+            // ball.pos - hand.start, hand.start is (0,0) so just normalize ball.pos
+            v2normalize(&norm, &distAwayFromHand, &ball->position);
+        } else {
+            v2sub(&norm, &ball->position, handPos);
+            v2normalize(&norm, &distAwayFromHand, &norm);
+        }
+        distAwayFromHand = v2dot(&ball->position, &norm);
+        if (distAwayFromHand < 0) {
+            distAwayFromHand = -distAwayFromHand;
+        }
+    }
+
+    sll minDist = slladd(s_handThickness, ball->radius);
+    if (distAwayFromHand < minDist) {
+        sll force = sllsub(distAwayFromHand, minDist);
+        Vec2 forceV;
+        v2mulsll(&forceV, &norm, force);
+        v2sub(&ball->position, &ball->position, &forceV);
     }
 }
 
@@ -123,6 +175,10 @@ static void simUpdate() {
             Ball *ball2 = &s_ballArr[j];
             ballCollideBall(ball, ball2);
         }
+        
+        ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
+        ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
+
         ballContrainWorld(ball);
 
         // update
@@ -151,6 +207,15 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
 
     graphics_context_set_fill_color(ctx, GColorBlack);
     graphics_fill_rect(ctx, GRect(s_halfScreenGP.x - 1, s_halfScreenGP.y - 1, 3, 3), 0, GCornerNone);
+
+    // debug
+    GPoint normPoint = GPoint(sll2int(sllmul2n(s_minuteHandNorm.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandNorm.y, 4)) + s_halfScreenGP.y);
+    GPoint tanPoint = GPoint(sll2int(sllmul2n(s_minuteHandTan.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandTan.y, 4)) + s_halfScreenGP.y);
+
+    graphics_context_set_stroke_color(ctx, GColorRed);
+    graphics_draw_line(ctx, s_halfScreenGP, normPoint);
+    graphics_context_set_stroke_color(ctx, GColorBlue);
+    graphics_draw_line(ctx, s_halfScreenGP, tanPoint);
 
     // border
     graphics_context_set_stroke_width(ctx, 4);
@@ -194,7 +259,6 @@ static void windowLoad(Window *window) {
         is = sllmul(is, spiralMul);
         pos.x = sllcos(is);
         pos.y = sllsin(is);
-        // v2mulsll(&pos, &pos, int2sll(s_worldRadius / 2));
         v2mulsll(&pos, &pos, spiral);
         ballCreate(ball, pos, BALL_RADIUS);
     }
