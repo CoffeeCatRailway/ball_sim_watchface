@@ -175,7 +175,7 @@ static void simUpdate() {
             Ball *ball2 = &s_ballArr[j];
             ballCollideBall(ball, ball2);
         }
-        
+
         ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
         ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
 
@@ -209,13 +209,13 @@ static void ballLayerUpdateProc(Layer *layer, GContext *ctx) {
     graphics_fill_rect(ctx, GRect(s_halfScreenGP.x - 1, s_halfScreenGP.y - 1, 3, 3), 0, GCornerNone);
 
     // debug
-    GPoint normPoint = GPoint(sll2int(sllmul2n(s_minuteHandNorm.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandNorm.y, 4)) + s_halfScreenGP.y);
-    GPoint tanPoint = GPoint(sll2int(sllmul2n(s_minuteHandTan.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandTan.y, 4)) + s_halfScreenGP.y);
-
-    graphics_context_set_stroke_color(ctx, GColorRed);
-    graphics_draw_line(ctx, s_halfScreenGP, normPoint);
-    graphics_context_set_stroke_color(ctx, GColorBlue);
-    graphics_draw_line(ctx, s_halfScreenGP, tanPoint);
+    // GPoint normPoint = GPoint(sll2int(sllmul2n(s_minuteHandNorm.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandNorm.y, 4)) + s_halfScreenGP.y);
+    // GPoint tanPoint = GPoint(sll2int(sllmul2n(s_minuteHandTan.x, 4)) + s_halfScreenGP.x, sll2int(sllmul2n(s_minuteHandTan.y, 4)) + s_halfScreenGP.y);
+    //
+    // graphics_context_set_stroke_color(ctx, GColorRed);
+    // graphics_draw_line(ctx, s_halfScreenGP, normPoint);
+    // graphics_context_set_stroke_color(ctx, GColorBlue);
+    // graphics_draw_line(ctx, s_halfScreenGP, tanPoint);
 
     // border
     graphics_context_set_stroke_width(ctx, 4);
