@@ -5,6 +5,10 @@
 #include "ball.h"
 
 #define FPS 30
+// Sub steps are still wip
+#define SUB_STEPS 1
+// #define MULTI_UPDATE_LOOP
+
 #define BALL_COUNT 45
 #define BALL_RADIUS 13
 
@@ -16,7 +20,7 @@ static sll s_deltaTime;
 
 static Vec2 s_gravity;
 static GPoint s_halfScreenGP;
-static int16_t s_worldRadius;
+static int s_worldRadius;
 
 static GColor s_ballColor;
 static GColor s_borderColor;
@@ -31,7 +35,7 @@ static const GPathInfo MINUTE_HAND_POINTS = {
 	}
 };
 static GPath *s_minuteHand;
-static int32_t s_minuteHandAngle;
+static int s_minuteHandAngle;
 static sll s_minuteHandLength = _int2sll(120);
 static Vec2 s_minuteHandPos, s_minuteHandNorm, s_minuteHandTan;
 
@@ -44,7 +48,7 @@ static const GPathInfo HOUR_HAND_POINTS = {
 	}
 };
 static GPath *s_hourHand;
-static int32_t s_hourHandAngle;
+static int s_hourHandAngle;
 static sll s_hourHandLength = _int2sll(85);
 static Vec2 s_hourHandPos, s_hourHandNorm, s_hourHandTan;
 
@@ -172,22 +176,29 @@ static void ballCollideHand(Ball *ball, sll handLength, Vec2 *handPos, Vec2 *han
 }
 
 static void simUpdate() {
-	for (int i = 0; i < BALL_COUNT; i++) {
-		Ball *ball = &s_ballArr[i];
-		// contrain + collide
-		for (int j = 0; j < BALL_COUNT; j++) {
-			Ball *ball2 = &s_ballArr[j];
-			ballCollideBall(ball, ball2);
+	sll dt = slldiv(s_deltaTime, int2sll(SUB_STEPS));
+	for (short subStep = 0; subStep < SUB_STEPS; subStep++) {
+		for (int i = 0; i < BALL_COUNT; i++) {
+			Ball *ball = &s_ballArr[i];
+			// constrain + collide
+			for (int j = 0; j < BALL_COUNT; j++) {
+				Ball *ball2 = &s_ballArr[j];
+				ballCollideBall(ball, ball2);
+			}
+
+			ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
+			ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
+
+			ballContrainWorld(ball);
+#ifdef MULTI_UPDATE_LOOP
 		}
-
-		ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
-		ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
-
-		ballContrainWorld(ball);
-
-		// update
-		v2add(&ball->acceleration, &ball->acceleration, &s_gravity);
-		ballUpdate(ball, s_deltaTime);
+		for (int i = 0; i < BALL_COUNT; i++) {
+			Ball *ball = &s_ballArr[i];
+#endif
+			// update
+			v2add(&ball->acceleration, &ball->acceleration, &s_gravity);
+			ballUpdate(ball, dt);
+		}
 	}
 	layer_mark_dirty(s_ballLayer);
 }
@@ -235,7 +246,7 @@ static void handleTimerTick() {
 static void windowLoad(Window *window) {
 	Layer *windowLayer = window_get_root_layer(window);
 	GRect bounds = layer_get_bounds(windowLayer);
-	int16_t minBound;
+	int minBound;
 	if (bounds.size.w < bounds.size.h) {
 		minBound = bounds.size.w;
 	} else {
@@ -285,9 +296,9 @@ static void init() {
 	s_window = window_create();
 	window_set_background_color(s_window, GColorBlack);
 	window_set_window_handlers(s_window, (WindowHandlers){
-		                           .load = windowLoad,
-		                           .unload = windowUnload,
-	                           });
+								   .load = windowLoad,
+								   .unload = windowUnload,
+							   });
 	window_stack_push(s_window, true);
 
 	tick_timer_service_subscribe(MINUTE_UNIT, tickTimerCallback);
