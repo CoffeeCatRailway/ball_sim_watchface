@@ -8,8 +8,8 @@
 #include "math-sll.h"
 
 typedef struct Vec2 {
-    sll x;
-    sll y;
+	sll x;
+	sll y;
 } Vec2;
 
 #define vec2(x, y) ((Vec2){int2sll(x), int2sll(y)})
@@ -17,58 +17,58 @@ typedef struct Vec2 {
 #define vec2one (vec2(1, 1))
 
 void v2copy(Vec2 *dest, Vec2 *src) {
-    dest->x = src->x;
-    dest->y = src->y;
+	dest->x = src->x;
+	dest->y = src->y;
 }
 
 void v2copyi(Vec2 *dest, int x, int y) {
-    dest->x = int2sll(x);
-    dest->y = int2sll(y);
+	dest->x = int2sll(x);
+	dest->y = int2sll(y);
 }
 
 void v2add(Vec2 *dest, Vec2 *a, Vec2 *b) {
-    dest->x = slladd(a->x, b->x);
-    dest->y = slladd(a->y, b->y);
+	dest->x = slladd(a->x, b->x);
+	dest->y = slladd(a->y, b->y);
 }
 
 void v2sub(Vec2 *dest, Vec2 *a, Vec2 *b) {
-    dest->x = sllsub(a->x, b->x);
-    dest->y = sllsub(a->y, b->y);
+	dest->x = sllsub(a->x, b->x);
+	dest->y = sllsub(a->y, b->y);
 }
 
 void v2mulsll(Vec2 *dest, Vec2 *a, sll s) {
-    dest->x = sllmul(a->x, s);
-    dest->y = sllmul(a->y, s);
+	dest->x = sllmul(a->x, s);
+	dest->y = sllmul(a->y, s);
 }
 
 void v2divsll(Vec2 *dest, Vec2 *a, sll s) {
-    dest->x = slldiv(a->x, s);
-    dest->y = slldiv(a->y, s);
+	dest->x = slldiv(a->x, s);
+	dest->y = slldiv(a->y, s);
 }
 
 void v2neg(Vec2 *dest, Vec2 *a) {
-    dest->x = sllneg(a->x);
-    dest->y = sllneg(a->y);
+	dest->x = sllneg(a->x);
+	dest->y = sllneg(a->y);
 }
 
 sll v2dot(Vec2 *a, Vec2 *b) {
-    sll abx = sllmul(a->x, b->x);
-    sll aby = sllmul(a->y, b->y);
-    return slladd(abx, aby);
+	sll abx = sllmul(a->x, b->x);
+	sll aby = sllmul(a->y, b->y);
+	return slladd(abx, aby);
 }
 
 sll v2length(Vec2 *a) {
-    return sllsqrt(v2dot(a, a));
+	return sllsqrt(v2dot(a, a));
 }
 
 void v2normalize(Vec2 *dest, sll *len, Vec2 *a) {
-    *len = v2length(a);
-    if (*len == 0) {
-        dest->x = 0;
-        dest->y = 0;
-    }
-    dest->x = slldiv(a->x, *len);
-    dest->y = slldiv(a->y, *len);
+	*len = v2length(a);
+	if (*len == 0) {
+		dest->x = 0;
+		dest->y = 0;
+	}
+	dest->x = slldiv(a->x, *len);
+	dest->y = slldiv(a->y, *len);
 }
 
 #endif //BALL_SIM_WATCHFACE_VEC2_H
