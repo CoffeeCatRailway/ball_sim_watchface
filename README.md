@@ -3,6 +3,8 @@
 I always like messing with physics sims and bought a Round 2 recently, so I decided to try and make a watchface combining them!
 
 ![](screenshots/msrdc_16-06-2026_05-18-19.png)
+![](screenshots/msrdc_16-06-2026_03-25-19.mp4)
+Sample video with the minute hand moving every second
 
 ### Features:
 - Ball color for battery precentage (green >40%, yellow >20%, red <20%)
