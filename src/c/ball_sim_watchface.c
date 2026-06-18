@@ -52,7 +52,7 @@ static int s_hourHandAngle;
 static sll s_hourHandLength = _int2sll(85);
 static Vec2 s_hourHandPos, s_hourHandNorm, s_hourHandTan;
 
-static sll s_handThickness = _int2sll(20);
+static sll s_handThickness = _int2sll(8);
 
 static sll slllerp(sll start, sll stop, sll t) {
 	return slladd(start, sllmul(sllsub(stop, start), t));
