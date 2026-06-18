@@ -54,10 +54,6 @@ static Vec2 s_hourHandPos, s_hourHandNorm, s_hourHandTan;
 
 static sll s_handThickness = _int2sll(8);
 
-static sll slllerp(sll start, sll stop, sll t) {
-	return slladd(start, sllmul(sllsub(stop, start), t));
-}
-
 static void updateHands() {
 	time_t temp = time(NULL);
 	tm *tickTime = localtime(&temp);
