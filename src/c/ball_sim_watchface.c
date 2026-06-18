@@ -127,7 +127,7 @@ static void ballCollideBall(Ball *ball1, Ball *ball2) {
 	}
 }
 
-static void ballContrainWorld(Ball *ball) {
+static void ballConstrainWorld(Ball *ball) {
 	sll dist, minDist = int2sll(s_worldRadius - ball->radius - 1);
 	Vec2 dir;
 	v2normalize(&dir, &dist, &ball->position);
@@ -189,7 +189,7 @@ static void simUpdate() {
 			ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
 			ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
 
-			ballContrainWorld(ball);
+			ballConstrainWorld(ball);
 #ifdef MULTI_UPDATE_LOOP
 		}
 		for (int i = 0; i < BALL_COUNT; i++) {
