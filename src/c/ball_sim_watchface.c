@@ -60,7 +60,7 @@ static sll slllerp(sll start, sll stop, sll t) {
 
 static void updateHands() {
 	time_t temp = time(NULL);
-	struct tm *tickTime = localtime(&temp);
+	tm *tickTime = localtime(&temp);
 
 	s_minuteHandAngle = TRIG_MAX_ANGLE * tickTime->tm_min / 60;
 	s_hourHandAngle = TRIG_MAX_ANGLE * (tickTime->tm_hour % 12 * 6 + tickTime->tm_min / 10) / (12 * 6);
@@ -82,7 +82,7 @@ static void updateHands() {
 	s_hourHandPos.y = sllmul(s_hourHandNorm.y, s_hourHandLength);
 }
 
-static void tickTimerCallback(struct tm *tickTime, TimeUnits unitsChanged) {
+static void tickTimerCallback(tm *tickTime, TimeUnits unitsChanged) {
 	updateHands();
 	layer_mark_dirty(s_ballLayer);
 }
@@ -166,7 +166,7 @@ static void ballCollideHand(Ball *ball, sll handLength, Vec2 *handPos, Vec2 *han
 		}
 	}
 
-	sll minDist = slladd(s_handThickness, ball->radius);
+	sll minDist = slladd(s_handThickness, int2sll(ball->radius));
 	if (distAwayFromHand < minDist) {
 		sll force = sllsub(distAwayFromHand, minDist);
 		Vec2 forceV;

@@ -52,9 +52,7 @@ void v2neg(Vec2 *dest, Vec2 *a) {
 }
 
 sll v2dot(Vec2 *a, Vec2 *b) {
-	sll abx = sllmul(a->x, b->x);
-	sll aby = sllmul(a->y, b->y);
-	return slladd(abx, aby);
+	return slladd(sllmul(a->x, b->x), sllmul(a->y, b->y));
 }
 
 sll v2length(Vec2 *a) {

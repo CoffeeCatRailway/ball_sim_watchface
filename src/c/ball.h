@@ -13,10 +13,10 @@ typedef struct Ball {
 	Vec2 position;
 	Vec2 positionPrev;
 	Vec2 acceleration;
-	uint16_t radius;
+	int radius;
 } Ball;
 
-Ball *ballCreateP(Vec2 pos, uint16_t radius) {
+Ball *ballCreateP(Vec2 pos, int radius) {
 	Ball *ball = malloc(sizeof(Ball));
 	v2copy(&ball->position, &pos);
 	v2copy(&ball->positionPrev, &pos);
@@ -25,7 +25,7 @@ Ball *ballCreateP(Vec2 pos, uint16_t radius) {
 	return ball;
 }
 
-void ballCreate(Ball *ball, Vec2 pos, uint16_t radius) {
+void ballCreate(Ball *ball, Vec2 pos, int radius) {
 	v2copy(&ball->position, &pos);
 	v2copy(&ball->positionPrev, &pos);
 	v2copyi(&ball->acceleration, 0, 0);
@@ -64,7 +64,7 @@ void ballDraw(Ball *ball, GContext *ctx, GPoint *offset, GColor color) {
 	graphics_draw_circle(ctx, p, ball->radius);
 }
 
-void ballDestroy(Ball *ball) {
+void ballDestroyP(Ball *ball) {
 	free(ball);
 }
 
