@@ -292,9 +292,9 @@ static void init() {
 	s_window = window_create();
 	window_set_background_color(s_window, GColorBlack);
 	window_set_window_handlers(s_window, (WindowHandlers){
-								   .load = windowLoad,
-								   .unload = windowUnload,
-							   });
+		                           .load   = windowLoad,
+		                           .unload = windowUnload,
+	                           });
 	window_stack_push(s_window, true);
 
 	tick_timer_service_subscribe(MINUTE_UNIT, tickTimerCallback);
