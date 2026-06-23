@@ -37,6 +37,7 @@ static const GPathInfo MINUTE_HAND_POINTS = {
 static GPath *s_minuteHand;
 static int s_minuteHandAngle;
 static sll s_minuteHandLength = _int2sll(120);
+static sll s_minuteHandThickness = _int2sll(8);
 static Vec2 s_minuteHandPos, s_minuteHandNorm, s_minuteHandTan;
 
 static const GPathInfo HOUR_HAND_POINTS = {
@@ -50,9 +51,9 @@ static const GPathInfo HOUR_HAND_POINTS = {
 static GPath *s_hourHand;
 static int s_hourHandAngle;
 static sll s_hourHandLength = _int2sll(85);
+static sll s_hourHandThickness = _int2sll(6);
 static Vec2 s_hourHandPos, s_hourHandNorm, s_hourHandTan;
 
-static sll s_handThickness = _int2sll(8);
 
 static void updateHands() {
 	time_t temp = time(NULL);
@@ -134,7 +135,7 @@ static void ballConstrainWorld(Ball *ball) {
 	}
 }
 
-static void ballCollideHand(Ball *ball, sll handLength, Vec2 *handPos, Vec2 *handNorm, Vec2 *handTan) {
+static void ballCollideHand(Ball *ball, sll handLength, sll handThickness, Vec2 *handPos, Vec2 *handNorm, Vec2 *handTan) {
 	sll distAlongHand = v2dot(&ball->position, handNorm);
 
 	// Default to along the hand
@@ -162,7 +163,7 @@ static void ballCollideHand(Ball *ball, sll handLength, Vec2 *handPos, Vec2 *han
 		}
 	}
 
-	sll minDist = slladd(s_handThickness, int2sll(ball->radius));
+	sll minDist = slladd(handThickness, int2sll(ball->radius));
 	if (distAwayFromHand < minDist) {
 		sll force = sllsub(distAwayFromHand, minDist);
 		Vec2 forceV;
@@ -182,8 +183,8 @@ static void simUpdate() {
 				ballCollideBall(ball, ball2);
 			}
 
-			ballCollideHand(ball, s_minuteHandLength, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
-			ballCollideHand(ball, s_hourHandLength, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
+			ballCollideHand(ball, s_minuteHandLength, s_minuteHandThickness, &s_minuteHandPos, &s_minuteHandNorm, &s_minuteHandTan);
+			ballCollideHand(ball, s_hourHandLength, s_hourHandThickness, &s_hourHandPos, &s_hourHandNorm, &s_hourHandTan);
 
 			ballConstrainWorld(ball);
 #ifdef MULTI_UPDATE_LOOP
